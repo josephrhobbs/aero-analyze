@@ -1,0 +1,136 @@
+!
+!----------------- BASIC DEFINITIONS ----------------------------
+!
+BWB
+!Mach
+0.0
+!IYsym    IZsym    Zsym
+ 0        0        0.0
+!Sref     Cref     Bref
+ 728.36   9.367    85.34
+!Xref     Yref     Zref
+ 0        0        0
+!
+!----------------- WING STARTS HERE -----------------------------
+!
+SURFACE
+WING
+!Nchordwise   Cspace     Nspanwise  Sspace
+ 12           1.0        100         -2
+YDUPLICATE
+0
+!-----------------------------------------------
+SECTION
+!     Xle      Yle      Zle    Chord     Ainc
+    0.000    0.000    0.730   44.023    1.258
+AFILE
+orig0foilmod.dat 
+
+SECTION
+!     Xle      Yle      Zle    Chord     Ainc
+    4.828    3.048    0.752   38.997    1.115
+AFILE
+orig1foilmod.dat 
+CONTROL
+flaperon1  1.0    0.90    0. 0. 0.    1.0
+
+SECTION
+!     Xle      Yle      Zle    Chord     Ainc
+   10.241    6.096    0.845   32.962    1.143
+AFILE
+orig2foilmod.dat 
+CONTROL
+flaperon1  1.0    0.90    0. 0. 0.    1.0
+
+SECTION
+!     Xle      Yle      Zle    Chord     Ainc
+   13.871    9.144    0.970   28.165    0.925
+AFILE
+orig3foilmod.dat 
+
+SECTION
+!     Xle      Yle      Zle    Chord     Ainc
+   16.919   12.192    0.818   23.689    0.851
+AFILE
+orig4foilmod.dat 
+
+SECTION
+!     Xle      Yle      Zle    Chord     Ainc
+   19.721   15.240    0.752   19.305    1.412
+AFILE
+orig5foilmod.dat 
+
+SECTION
+!     Xle      Yle      Zle    Chord     Ainc
+   22.293   18.288    0.629   15.504    1.565
+AFILE
+orig6foilmod.dat 
+
+SECTION
+!     Xle      Yle      Zle    Chord     Ainc
+   24.844   21.336    0.604   12.130    0.976
+AFILE
+orig7foilmod.dat 
+CONTROL
+flaperon2  1.0    0.70    0. 0. 0.    1.0
+
+SECTION
+!     Xle      Yle      Zle    Chord     Ainc
+   27.371   24.384    0.528    9.128   -0.807
+AFILE
+orig8foilmod.dat 
+CONTROL
+flaperon2  1.0    0.70    0. 0. 0.    1.0
+
+SECTION
+!     Xle      Yle      Zle    Chord     Ainc
+   29.745   27.432    0.478    7.530   -2.487
+AFILE
+orig9foilmod.dat 
+CONTROL
+flaperon2  1.0    0.70    0. 0. 0.    1.0
+CONTROL
+flaperon3  1.0    0.70    0. 0. 0.    1.0
+
+SECTION
+!     Xle      Yle      Zle    Chord     Ainc
+   32.059   30.480    0.422    6.578   -3.549
+AFILE
+orig10foilmod.dat
+CONTROL
+flaperon3  1.0    0.70    0. 0. 0.    1.0
+
+SECTION
+!     Xle      Yle      Zle    Chord     Ainc
+   34.357   33.528    0.882    5.921   -3.412
+AFILE
+orig11foilmod.dat
+CONTROL
+flaperon3  1.0    0.70    0. 0. 0.    1.0
+CONTROL
+flaperon4  1.0    0.70    0. 0. 0.    1.0
+
+SECTION
+!     Xle      Yle      Zle    Chord     Ainc
+   36.655   36.576    1.231    5.261   -3.494
+AFILE
+orig12foilmod.dat
+CONTROL
+flaperon4  1.0    0.70    0. 0. 0.    1.0
+CONTROL
+flaperon5  1.0    0.70    0. 0. 0.    1.0
+
+SECTION
+!     Xle      Yle      Zle    Chord     Ainc
+   38.953   39.624    1.619    4.609   -4.020
+AFILE
+orig13foilmod.dat
+CONTROL
+flaperon5  1.0    0.70    0. 0. 0.    1.0
+
+SECTION
+!     Xle      Yle      Zle    Chord     Ainc
+   41.252   42.672    1.985    3.957   -5.437
+AFILE
+orig14foilmod.dat
+

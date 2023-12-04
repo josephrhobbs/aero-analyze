@@ -1,0 +1,19 @@
+# Flight Conditions
+# 12000 m
+
+# Propulsive system type
+# 1: Turbine engine
+# 2: Hydrogen fuel cell
+1
+
+# Cruise Mach number (unitless)
+0.8
+
+# Local speed of sound (m/s)
+295.1
+
+# Free-stream density (kg/m3)
+0.6
+
+# Kinematic viscosity (m2/s)
+4.557e-5
