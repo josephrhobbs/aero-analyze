@@ -1,0 +1,6 @@
+*.avl
+*.txt
+avl
+xfoil
+*.bl
+/__pycache__

@@ -1,5 +1,5 @@
 # Flight Conditions
-# 12000 m
+# 12000 m, M 0.8
 
 # Propulsive system type
 # 1: Turbine engine
