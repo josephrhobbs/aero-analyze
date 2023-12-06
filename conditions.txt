@@ -1,5 +1,5 @@
 # Flight Conditions
-# 12000 m, M 0.8
+# 17000 m, M 0.8
 
 # Propulsive system type
 # 1: Turbine engine
@@ -13,7 +13,7 @@
 295.1
 
 # Free-stream density (kg/m3)
-0.312
+0.142
 
 # Kinematic viscosity (m2/s)
-4.557e-5
+9.990e-5

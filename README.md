@@ -64,7 +64,10 @@ Thanks to MIT Professor Qiqi Wang for:
 - `graph.py`
 - `vehicle.py`
 - `*.dat` airfoils
+- `cylinders.txt`
 
 Thanks to MIT Professor Mark Drela for:
 - AVL (not included)
 - XFOIL (not included)
+
+Thanks to Boeing and Bob Liebeck for the original `bwb.avl`.
