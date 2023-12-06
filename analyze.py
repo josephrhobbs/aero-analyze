@@ -1,7 +1,7 @@
 import argparse
 import numpy as np
 from graph import AvlInput
-from math import sqrt, log, floor
+from math import sqrt, log, floor, cos, acos
 import os
 
 ###############
@@ -47,7 +47,11 @@ def section_spar(sec, xSpar):
     zLower = np.interp(x, sec.airfoil[iLE:,0], sec.airfoil[iLE:,1])
     return zLower * sec.chord + sec.xyzLE[2], zUpper * sec.chord + sec.xyzLE[2]
 
-def compute_spar(wing, cylinders):
+def compute_spar(avl_fname, cylinders_fname):
+    avlInput = AvlInput(avl_fname)
+    cylinders = np.loadtxt(cylinders_fname, skiprows=1)
+    wing = avlInput.surfaces[0]
+
     xLE = np.array([s.xyzLE[0] for s in wing.sections])
     yLE = np.array([s.xyzLE[1] for s in wing.sections])
     chord = np.array([s.chord for s in wing.sections])
@@ -60,7 +64,9 @@ def compute_spar(wing, cylinders):
     t = zUpper[0] - zLower[0]
     L = pow(pow(yLE[-1] - yLE[0], 2) + pow(xSparTip - xSparRoot, 2), 0.5)
 
-    return b, L, t
+    theta = acos(b/2 / L)
+
+    return b, theta, t
 
 def compute_planform(avl_fname):
     avlInput = AvlInput(avl_fname)
@@ -76,12 +82,15 @@ def compute_planform(avl_fname):
     return sum(sections), sections
 
 def compute_reference_dimensions(avl_fname):
-    _S, sections = compute_planform(avl_fname)
     avlInput = AvlInput(avl_fname)
     wing = avlInput.surfaces[0]
     cref = avlInput.Cref
     bref = 2 * wing.sections[-1].xyzLE[1]
     return bref, cref
+
+def get_cref(avl_fname):
+    avlInput = AvlInput(avl_fname)
+    return avlInput.Cref
 
 def fuel_cylinder_masses(diameter, length):
     """
@@ -93,15 +102,15 @@ def fuel_cylinder_masses(diameter, length):
     m_empty = (1/eta - 1) * m_fuel
     return (m_empty, m_fuel)
 
-def compute_masses(avl_fname, cylinders_fname, proptype):
-    avlInput = AvlInput(args.avl_fname)
+def compute_masses(avl_fname, cylinders_fname, proptype, b, theta, t):
+    avlInput = AvlInput(avl_fname)
 
-    cylinders = np.loadtxt(args.cylinders_fname, skiprows=1)
+    cylinders = np.loadtxt(cylinders_fname, skiprows=1)
     wing = avlInput.surfaces[0]
 
-    # Find planform area, spar length, span, and spar root thickness
+    # Find planform area and spar length
     S, _sections = compute_planform(avl_fname)
-    b, L, t = compute_spar(wing, cylinders)
+    L = b/2 / cos(theta)
 
     # Find total cabin area
     total_cabin_area = 0
@@ -272,6 +281,107 @@ def compute_viscous_drag(cdv_array, sections):
 
     return viscous_drag / sum(sections)
 
+def analyze(args, b, theta, t, cref, verbose=False):
+    """
+    Sensitivities:
+    - bref
+    - cref
+    - 
+    """
+    # READ IN FLIGHT CONDITIONS
+
+    proptype, mach, ainf, rho, kinvisc = process_conditions(args.conditions_fname)
+    uinf = mach * ainf
+    bref = b
+    Sref = bref * cref
+    re = uinf * cref / kinvisc
+
+    if verbose:
+        print("FLIGHT CONDITIONS")
+        print(f"bref = {bref} m")
+        print(f"cref = {cref} m")
+        print(f"Sref = {round(Sref, 4)} m2")
+        print(f"Uinf = {round(uinf, 4)} m/s")
+        print(f"Re = {round(re / 1E+6, 4)}E+6")
+
+    # COMPUTE FLIGHT TIME
+
+    time = TARGET_RANGE / uinf
+
+    if verbose:
+        print(f"Time = {round(time / 3_600, 4)} h")
+        print()
+
+    # COMPUTE MASSES AND PLANFORM FROM INPUT FILES
+
+    me, ml, mto, pax, eta = compute_masses(args.avl_fname, args.cylinders_fname, proptype, b, theta, t)
+    S, sections = compute_planform(args.avl_fname)
+
+    if verbose:
+        print("AIRCRAFT MASS AND PASSENGER CAPACITY")
+        print(f"Empty mass = {round(me, 4)} kg")
+        print(f"Landing mass = {round(ml, 4)} kg")
+        print(f"Take-off mass = {round(mto, 4)} kg")
+        print(f"Passengers = {floor(pax)} pax")
+        print()
+
+    # COMPUTE OBJECTIVE
+
+    obj = time * me
+
+    if verbose:
+        print("AIRCRAFT OBJECTIVE")
+        print(f"OBJ = {round(obj / 1E+9, 4)}E+9 kg-s")
+        print()
+
+    # COMPUTE CL
+
+    q = 1/2 * rho * pow(uinf, 2)
+    cl = mto * GRAVITY / q / Sref
+
+    if verbose:
+        print("COEFFICIENT OF LIFT")
+        print(f"CL = {round(cl, 4)}")
+        print()
+
+    # COMPUTE AOA AND CDi FROM AVL
+
+    aoa, cdi = compute_aoa_and_induced_drag(cl)
+
+    if verbose:
+        print(f"AOA = {round(aoa, 4)}")
+        print(f"CDi = {round(cdi, 4)}")
+        print()
+
+    # COMPUTE CDv FROM XFOIL
+
+    cdv_array = viscous_drag_array(re, aoa)
+    cdv = compute_viscous_drag(cdv_array, sections)
+
+    if verbose:
+        print(f"CDv = {round(cdv, 4)}")
+        print()
+
+    # COMPUTE CD FROM CDi AND CDv
+
+    cd = cdv + cdi
+
+    if verbose:
+        print("COEFFICIENT OF DRAG")
+        print(f"CD = {round(cd, 4)}")
+        print()
+
+    # COMPUTE RANGE
+
+    R = compute_range(ml, mto, eta, cl, cd)
+    
+    if verbose:
+        print("AIRCRAFT RANGE")
+        print(f"L/D = {round(cl/cd, 4)}")
+        print(f"Range = {round(R / 1000, 4)} km")
+
+    return obj, R
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(prog='substitute',
             description='substitute new planform into AVL file')
@@ -280,76 +390,7 @@ if __name__ == '__main__':
     parser.add_argument('conditions_fname')
     args = parser.parse_args()
 
-    # READ IN FLIGHT CONDITIONS
+    b, theta, t = compute_spar(args.avl_fname, args.cylinders_fname)
+    cref = get_cref(args.avl_fname)
 
-    print(f"FLIGHT CONDITIONS")
-    proptype, mach, ainf, rho, kinvisc = process_conditions(args.conditions_fname)
-    uinf = mach * ainf
-    bref, cref = compute_reference_dimensions(args.avl_fname)
-    Sref = bref * cref
-    print(f"bref = {bref} m")
-    print(f"cref = {cref} m")
-    print(f"Sref = {Sref} m2")
-    re = uinf * cref / kinvisc
-    print(f"Uinf = {round(uinf, 4)} m/s")
-    print(f"Re = {round(re / 1E+6, 4)}E+6")
-
-    # COMPUTE FLIGHT TIME
-
-    time = TARGET_RANGE / uinf
-    print(f"Time = {round(time / 3_600, 4)} h")
-    print()
-
-    # COMPUTE MASSES AND PLANFORM FROM INPUT FILES
-
-    print("AIRCRAFT MASS AND PASSENGER CAPACITY")
-    me, ml, mto, pax, eta = compute_masses(args.avl_fname, args.cylinders_fname, proptype)
-    S, sections = compute_planform(args.avl_fname)
-    print(f"Empty mass = {round(me, 4)} kg")
-    print(f"Landing mass = {round(ml, 4)} kg")
-    print(f"Take-off mass = {round(mto, 4)} kg")
-    print(f"Passengers = {floor(pax)} pax")
-    print()
-
-    # COMPUTE OBJECTIVE
-
-    print("AIRCRAFT OBJECTIVE")
-    obj = time * me
-    print(f"OBJ = {round(obj / 1E+9, 4)}E+9 kg-s")
-    print()
-
-    # COMPUTE CL
-
-    print("COEFFICIENT OF LIFT")
-    q = 1/2 * rho * pow(uinf, 2)
-    cl = mto * GRAVITY / q / Sref
-    print(f"CL = {round(cl, 4)}")
-    print()
-
-    # COMPUTE AOA AND CDi FROM AVL
-
-    aoa, cdi = compute_aoa_and_induced_drag(cl)
-    print(f"AOA = {round(aoa, 4)}")
-    print(f"CDi = {round(cdi, 4)}")
-    print()
-
-    # COMPUTE CDv FROM XFOIL
-
-    cdv_array = viscous_drag_array(re, aoa)
-    cdv = compute_viscous_drag(cdv_array, sections)
-    print(f"CDv = {round(cdv, 4)}")
-    print()
-
-    # COMPUTE CD FROM CDi AND CDv
-
-    cd = cdv + cdi
-    print("COEFFICIENT OF DRAG")
-    print(f"CD = {round(cd, 4)}")
-    print()
-
-    # COMPUTE RANGE
-
-    print("AIRCRAFT RANGE")
-    R = compute_range(ml, mto, eta, cl, cd)
-    print(f"L/D = {round(cl/cd, 4)}")
-    print(f"Range = {round(R / 1000, 4)} km")
+    obj, R = analyze(args, b, theta, t, cref, verbose=True)
