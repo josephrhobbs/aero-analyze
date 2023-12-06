@@ -55,6 +55,7 @@ Unfortunately, I don't know how to use macOS well enough to provide instructions
 
 # Changelog
 
+**v0.2.0**: Updated `analyze.py` to allow for calculation of objective and range sensitivities.
 **v0.1.0**: Initial commit.
 
 # Thanks
