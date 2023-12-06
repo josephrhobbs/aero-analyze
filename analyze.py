@@ -9,7 +9,7 @@ import os
 ###############
 
 AVL = "./avl"
-XFOIL = "xfoil"
+XFOIL = "./xfoil"
 
 #############
 # DUMP FILE #
@@ -58,33 +58,30 @@ def compute_spar(wing, cylinders):
     
     b = 2 * (yLE[-1] - yLE[0])
     t = zUpper[0] - zLower[0]
-    L = pow(pow(yLE[-1] - yLE[0], 2) + pow(xLE[-1] - xLE[0], 2), 0.5)
+    L = pow(pow(yLE[-1] - yLE[0], 2) + pow(xSparTip - xSparRoot, 2), 0.5)
 
     return b, L, t
 
 def compute_planform(avl_fname):
-    iSec = 0
-    avlInput = AvlInput(args.avl_fname)
+    avlInput = AvlInput(avl_fname)
     wing = avlInput.surfaces[0]
-    with open(avl_fname) as fin:
-        sections = []
-        for line in fin:
-            if line.strip() == '!Sref     Cref     Bref':
-                fin.readline()
-            elif line.strip() == '!     Xle      Yle      Zle    Chord     Ainc':
-                sec = wing.sections[iSec]
-                nextsecY = wing.sections[iSec + 1].xyzLE[1] if iSec + 1 < len(wing.sections) else 0
-                nextsecX = wing.sections[iSec + 1].xyzLE[0] if iSec + 1 < len(wing.sections) else 0
-                s = (nextsecY - sec.xyzLE[1]) * (nextsecX + sec.xyzLE[0])
-                sections.append(s)
-                fin.readline()
-                iSec += 1
-    wing = avlInput.surfaces[0]
+    sections = []
+    for i in range(len(wing.sections)):
+         c = wing.sections[i].chord
+         y0 = wing.sections[max(0, i-1)].xyzLE[1]
+         y1 = wing.sections[min(len(wing.sections)-1, i+1)].xyzLE[1]
+         dy = (y1 - y0) / 2
+         s = 2 * c * dy
+         sections.append(s)
     return sum(sections), sections
 
-def compute_reference_length(avl_fname):
+def compute_reference_dimensions(avl_fname):
     _S, sections = compute_planform(avl_fname)
-    return sections[0]
+    avlInput = AvlInput(avl_fname)
+    wing = avlInput.surfaces[0]
+    cref = avlInput.Cref
+    bref = 2 * wing.sections[-1].xyzLE[1]
+    return bref, cref
 
 def fuel_cylinder_masses(diameter, length):
     """
@@ -186,27 +183,22 @@ def viscous_drag_array(re, aoa):
         X = f"""load {airfoil}
 
 oper
-iter 500
 visc {re}
 alfa 0
 alfa {float(aoa/2)}
-pacc
-save.txt
-dump.txt
 alfa {float(aoa)}
 
 quit
             """
         with open("x", "w") as f:
             f.write(X)
-        os.system(f"{XFOIL} < x > {DUMP}")
+        os.system(f"{XFOIL} < x > save.txt")
         cdv = 0
         try:
             with open("save.txt", "r") as f:
                 file = f.read()
-                cdv = float(file.split("\n")[-2].strip().split()[2])
+                cdv = float(file.split("CD = ")[-1].strip()[:6])
             os.remove("save.txt")
-            os.remove("dump.txt")
             os.remove("x")
         except:
             print("XFOIL calculation diverged :(")
@@ -219,7 +211,6 @@ quit
                 print(f.read())
                 print()
             os.remove("save.txt")
-            os.remove("dump.txt")
             os.remove("x")
             return [0] * 15
         coefficients.append(cdv)
@@ -294,8 +285,12 @@ if __name__ == '__main__':
     print(f"FLIGHT CONDITIONS")
     proptype, mach, ainf, rho, kinvisc = process_conditions(args.conditions_fname)
     uinf = mach * ainf
-    l = compute_reference_length(args.avl_fname)
-    re = uinf * l / kinvisc
+    bref, cref = compute_reference_dimensions(args.avl_fname)
+    Sref = bref * cref
+    print(f"bref = {bref} m")
+    print(f"cref = {cref} m")
+    print(f"Sref = {Sref} m2")
+    re = uinf * cref / kinvisc
     print(f"Uinf = {round(uinf, 4)} m/s")
     print(f"Re = {round(re / 1E+6, 4)}E+6")
 
@@ -327,7 +322,7 @@ if __name__ == '__main__':
 
     print("COEFFICIENT OF LIFT")
     q = 1/2 * rho * pow(uinf, 2)
-    cl = mto * GRAVITY / q / S
+    cl = mto * GRAVITY / q / Sref
     print(f"CL = {round(cl, 4)}")
     print()
 
@@ -342,15 +337,19 @@ if __name__ == '__main__':
 
     cdv_array = viscous_drag_array(re, aoa)
     cdv = compute_viscous_drag(cdv_array, sections)
-    print(f"CDv = {round(sum(cdv_array), 4)}")
+    print(f"CDv = {round(cdv, 4)}")
     print()
 
     # COMPUTE CD FROM CDi AND CDv
 
     cd = cdv + cdi
+    print("COEFFICIENT OF DRAG")
+    print(f"CD = {round(cd, 4)}")
+    print()
 
     # COMPUTE RANGE
 
     print("AIRCRAFT RANGE")
     R = compute_range(ml, mto, eta, cl, cd)
+    print(f"L/D = {round(cl/cd, 4)}")
     print(f"Range = {round(R / 1000, 4)} km")

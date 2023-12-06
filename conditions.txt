@@ -13,7 +13,7 @@
 295.1
 
 # Free-stream density (kg/m3)
-0.6
+0.312
 
 # Kinematic viscosity (m2/s)
 4.557e-5
