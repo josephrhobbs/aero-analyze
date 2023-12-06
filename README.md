@@ -35,6 +35,24 @@ See `conditions.txt` for an example of this file format.
 
 Note that all lines beginning with a hash (`#`) in a flight conditions file will be ignored. 
 
+# Setup Instructions
+
+## Windows
+
+Before using `analyze.py`, you'll need to set it up.
+
+1. Open `analyze.py` in your favorite code editor.
+2. Change the variables `AVL` and `XFOIL` to the location of AVL and XFOIL.  If both of these are in the current
+directory, change these to `./avl.exe` and `./xfoil.exe` respectively.
+
+## Linux
+
+`analyze.py` is already set up for you.  Copy AVL and XFOIL into this directory and you're ready to go.
+
+## macOS
+
+Unfortunately, I don't know how to use macOS well enough to provide instructions.
+
 # Changelog
 
 **v0.1.0**: Initial commit.
