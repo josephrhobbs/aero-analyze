@@ -9,3 +9,6 @@ sensitivity
 graph
 /bwb
 /cylinders
+sweepanalyze
+quietanalyze.py
+thickanalyze

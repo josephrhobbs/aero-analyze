@@ -398,4 +398,4 @@ if __name__ == '__main__':
     b, theta, t = compute_spar(args.avl_fname, args.cylinders_fname)
     cref = get_cref(args.avl_fname)
 
-    obj, R = analyze(args, b, theta, t, cref, args.thick_scale, verbose=True)
+    obj, R = analyze(args, b, theta, args.thick_scale*t, cref, args.thick_scale, verbose=True)
