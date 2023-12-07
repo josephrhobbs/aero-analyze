@@ -161,7 +161,7 @@ def compute_masses(avl_fname, cylinders_fname, proptype, b, theta, t):
         eta = 0.45
 
     # COMPUTE TOTAL MASSES
-    empty_mass = landing_mass = takeoff_mass = m_struct + PAYLOAD
+    empty_mass = landing_mass = takeoff_mass = m_struct + PAYLOAD + m_propulsion
     for k, me, ml, mto, cyltype in cyl:
         empty_mass += me
         landing_mass += ml
