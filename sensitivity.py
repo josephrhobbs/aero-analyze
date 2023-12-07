@@ -8,10 +8,8 @@ import os
 # AVL & XFOIL #
 ###############
 
-PWD = os.getcwd()
-
-AVL = rf"{PWD}/avl"
-XFOIL = rf"{PWD}/xfoil"
+AVL = "./avl"
+XFOIL = "./xfoil"
 
 #############
 # DUMP FILE #
@@ -186,17 +184,13 @@ def process_conditions(conditions_fname):
     assert len(data) == 5
     return data
 
-def viscous_drag_array(re, aoa, thick_scale, verbose=False):
+def viscous_drag_array(re, aoa, verbose=False):
     if verbose:
         print("VISCOUS DRAG MODEL")
     coefficients = []
     for i in range(15):
         airfoil = f"orig{i}foilmod.dat"
         X = f"""load {airfoil}
-
-gdes
-tfac {thick_scale} {thick_scale}
-exec
 
 oper
 visc {re}
@@ -256,7 +250,6 @@ quit
             data = [[v.strip() for v in d.strip().split("=") if len(v.strip()) != 0] for d in f.read().split()]
         os.remove("forces.txt")
         os.remove("test.txt")
-        os.remove(DUMP)
         os.remove("a")
     except:
         print("AVL calculation diverged :(")
@@ -270,7 +263,6 @@ quit
             print()
         os.remove("forces.txt")
         os.remove("test.txt")
-        os.remove(DUMP)
         os.remove("a")
         return 0, 0
     processed = []
@@ -291,7 +283,13 @@ def compute_viscous_drag(cdv_array, sections):
 
     return viscous_drag / sum(sections)
 
-def analyze(args, b, theta, t, cref, thick_scale, verbose=False):
+def analyze(args, b, theta, t, cref, verbose=False):
+    """
+    Sensitivities:
+    - bref
+    - cref
+    - 
+    """
     # READ IN FLIGHT CONDITIONS
 
     proptype, mach, ainf, rho, kinvisc = process_conditions(args.conditions_fname)
@@ -359,7 +357,7 @@ def analyze(args, b, theta, t, cref, thick_scale, verbose=False):
 
     # COMPUTE CDv FROM XFOIL
 
-    cdv_array = viscous_drag_array(re, aoa, thick_scale, verbose)
+    cdv_array = viscous_drag_array(re, aoa, verbose)
     cdv = compute_viscous_drag(cdv_array, sections)
 
     if verbose:
@@ -392,10 +390,51 @@ if __name__ == '__main__':
     parser.add_argument('avl_fname')
     parser.add_argument('cylinders_fname')
     parser.add_argument('conditions_fname')
-    parser.add_argument('--thick-scale', type=float, default=1.0)
     args = parser.parse_args()
 
     b, theta, t = compute_spar(args.avl_fname, args.cylinders_fname)
     cref = get_cref(args.avl_fname)
 
-    obj, R = analyze(args, b, theta, t, cref, args.thick_scale, verbose=True)
+    # SENSITIVITY WRT b
+
+    print("COMPUTING SENSITIVITY WITH RESPECT TO SPAN")
+
+    obj1, R1 = analyze(args, 0.999 * b, theta, t, cref, verbose=False)
+    obj2, R2 = analyze(args, 1.001 * b, theta, t, cref, verbose=False)
+
+    print(f"df/db: {round((obj2 - obj1)/0.2 / 1E+9, 4)}E+9 kg s per %")
+    print(f"dR/db: {round((R2 - R1)/0.2 / 1000, 4)} km per %")
+    print()
+
+    # SENSITIVITY WRT cref
+
+    print("COMPUTING SENSITIVITY WITH RESPECT TO MEAN AERODYNAMIC CHORD")
+
+    obj1, R1 = analyze(args, b, theta, t, 0.999 * cref, verbose=False)
+    obj2, R2 = analyze(args, b, theta, t, 1.001 * cref, verbose=False)
+
+    print(f"df/dt: {round((obj2 - obj1)/0.2 / 1E+9, 4)}E+9 kg s per %")
+    print(f"dR/dt: {round((R2 - R1)/0.2 / 1000, 4)} km per %")
+    print()
+
+    # SENSITIVITY WRT t
+
+    print("COMPUTING SENSITIVITY WITH RESPECT TO SPAR THICKNESS")
+
+    obj1, R1 = analyze(args, b, theta, 0.999 * t, cref, verbose=False)
+    obj2, R2 = analyze(args, b, theta, 1.001 * t, cref, verbose=False)
+
+    print(f"df/dt: {round((obj2 - obj1)/0.2 / 1E+9, 4)}E+9 kg s per %")
+    print(f"dR/dt: {round((R2 - R1)/0.2 / 1000, 4)} km per %")
+    print()
+
+    # SENSITIVITY WRT theta
+
+    print("COMPUTING SENSITIVITY WITH RESPECT TO SWEEP ANGLE")
+
+    obj1, R1 = analyze(args, b, 0.999 * theta, t, cref, verbose=False)
+    obj2, R2 = analyze(args, b, 1.001 * theta, t, cref, verbose=False)
+
+    print(f"df/da: {round((obj2 - obj1)/0.2 / 1E+9, 4)}E+9 kg s per %")
+    print(f"dR/da: {round((R2 - R1)/0.2 / 1000, 4)} km per %")
+    print()

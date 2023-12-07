@@ -4,10 +4,26 @@ A simple Python script to analyze the performance of a Blended-Wing Body aircraf
 
 For use during the MIT 16.100 Final Project.
 
+# Cross-Platform Compatibility
+
+`analyze.py` works on both Windows and Linux now!
+
+## Windows Users
+
+Windows users should use `analyzewin.py`.
+
+## Linux Users
+
+Linux users should use `analyze.py`.
+
 # Usage
 
 ```
 python3 analyze.py [AVL-file] [cylinders-file] [conditions-file]
+```
+
+```
+python3 analyze.py [AVL-file] [cylinders-file] [conditions-file] --thick-scale 1.0
 ```
 
 ## AVL File
@@ -35,19 +51,21 @@ See `conditions.txt` for an example of this file format.
 
 Note that all lines beginning with a hash (`#`) in a flight conditions file will be ignored. 
 
+## Thickness Scale
+
+This is an *optional* argument specifying the thickness scale of the wing.
+
+If not specified, this defaults to `1.0`.
+
 # Setup Instructions
 
 ## Windows
 
-Before using `analyze.py`, you'll need to set it up.
-
-1. Open `analyze.py` in your favorite code editor.
-2. Change the variables `AVL` and `XFOIL` to the location of AVL and XFOIL.  If both of these are in the current
-directory, change these to `./avl.exe` and `./xfoil.exe` respectively.
+Before using `analyzewin.py`, copy `avl.exe` and `xfoil.exe` into the current directory.
 
 ## Linux
 
-`analyze.py` is already set up for you.  Copy AVL and XFOIL into this directory and you're ready to go.
+Before using `analyze.py`, copy `avl` and `xfoil` into the current directory.
 
 ## macOS
 

@@ -5,3 +5,7 @@ xfoil
 *.bl
 /__pycache__
 analyze
+sensitivity
+graph
+/bwb
+/cylinders

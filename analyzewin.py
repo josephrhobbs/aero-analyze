@@ -10,8 +10,8 @@ import os
 
 PWD = os.getcwd()
 
-AVL = rf"{PWD}/avl"
-XFOIL = rf"{PWD}/xfoil"
+AVL = rf"{PWD}\avl.exe"
+XFOIL = rf"{PWD}\xfoil.exe"
 
 #############
 # DUMP FILE #
