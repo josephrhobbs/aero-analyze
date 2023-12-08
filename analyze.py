@@ -349,7 +349,7 @@ def analyze(args, b, theta, t, cref, thick_scale, verbose=False):
     if verbose:
         print("AIRCRAFT OBJECTIVE")
         print(f"OBJ A = {round(obj / 1E+9, 4)}E+9 s")
-        print(f"OBJ B = {round(obj / payload, 1E+4, 4)}E+4 s")
+        print(f"OBJ B = {round(obj / payload / 1E+4, 4)}E+4 s")
         print()
 
     # COMPUTE CL
