@@ -24,7 +24,6 @@ DUMP = "temp.txt"
 #############
 
 TARGET_RANGE = 14_140_000 # m
-PAYLOAD = 53_000 # kg
 RHO_H2 = 71 # kg / m3
 D0 = 3 # m
 PI = 3.141592653 # ul
@@ -120,6 +119,7 @@ def compute_masses(avl_fname, cylinders_fname, proptype, b, theta, t):
         if row[5] == 0:
             total_cabin_area += row[2] * (row[4] - row[3])
     pax = total_cabin_area / PAX_AREA
+    payload = total_cabin_area * 53_000 / 240
 
     # Find position, type, and masses of each cylinder
     cyl = []
@@ -148,7 +148,7 @@ def compute_masses(avl_fname, cylinders_fname, proptype, b, theta, t):
     fuel_mto = 0
     for k, me, ml, mto, cyltype in cyl:
         fuel_mto += mto
-    appx_takeoff_mass = 1.2 * (fuel_mto + PAYLOAD + m_struct)
+    appx_takeoff_mass = 1.2 * (fuel_mto + payload + m_struct)
     m_turbine = 2 * C3 * pow(appx_takeoff_mass * GRAVITY / 10, 0.89)
     m_fuelcell = appx_takeoff_mass * GRAVITY / 5 * C6
 
@@ -161,13 +161,25 @@ def compute_masses(avl_fname, cylinders_fname, proptype, b, theta, t):
         eta = 0.45
 
     # COMPUTE TOTAL MASSES
-    empty_mass = landing_mass = takeoff_mass = m_struct + PAYLOAD + m_propulsion
+    fuel_mass = 0
+    tank_mass = 0
+    empty_mass = landing_mass = takeoff_mass = m_struct + payload + m_propulsion
     for k, me, ml, mto, cyltype in cyl:
         empty_mass += me
         landing_mass += ml
         takeoff_mass += mto
+        tank_mass += me
+        fuel_mass += mto - me
 
-    return (empty_mass, landing_mass, takeoff_mass, pax, eta)
+    print("MASS BREAKDOWN")
+    print(f"Structural mass = {round(empty_mass, 4)} kg")
+    print(f"Payload mass = {round(payload, 4)} kg")
+    print(f"Propulsion system mass = {round(empty_mass, 4)} kg")
+    print(f"Fuel mass = {round(fuel_mass, 4)} kg")
+    print(f"Empty tank mass = {round(tank_mass, 4)} kg")
+    print()
+
+    return (empty_mass, landing_mass, takeoff_mass, pax, payload, eta)
 
 def compute_range(ml, mto, eta, cl, cd):
     return ENERGY * eta / GRAVITY * cl / cd * log(mto / ml)
@@ -318,7 +330,7 @@ def analyze(args, b, theta, t, cref, thick_scale, verbose=False):
 
     # COMPUTE MASSES AND PLANFORM FROM INPUT FILES
 
-    me, ml, mto, pax, eta = compute_masses(args.avl_fname, args.cylinders_fname, proptype, b, theta, t)
+    me, ml, mto, pax, payload, eta = compute_masses(args.avl_fname, args.cylinders_fname, proptype, b, theta, t)
     S, sections = compute_planform(args.avl_fname)
 
     if verbose:
@@ -326,6 +338,7 @@ def analyze(args, b, theta, t, cref, thick_scale, verbose=False):
         print(f"Empty mass = {round(me, 4)} kg")
         print(f"Landing mass = {round(ml, 4)} kg")
         print(f"Take-off mass = {round(mto, 4)} kg")
+        print(f"Payload = {round(payload, 4)} kg")
         print(f"Passengers = {floor(pax)} pax")
         print()
 
@@ -335,7 +348,8 @@ def analyze(args, b, theta, t, cref, thick_scale, verbose=False):
 
     if verbose:
         print("AIRCRAFT OBJECTIVE")
-        print(f"OBJ = {round(obj / 1E+9, 4)}E+9 kg s")
+        print(f"OBJ A = {round(obj / 1E+9, 4)}E+9 s")
+        print(f"OBJ B = {round(obj / payload, 1E+4, 4)}E+4 s")
         print()
 
     # COMPUTE CL

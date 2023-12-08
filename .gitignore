@@ -23,5 +23,7 @@ quietanalyze.py
 analyze
 sensitivity
 graph
-sweepanalyze
-thickanalyze
+sweepexplore
+thickexplore
+spanexplore
+chordexplore
