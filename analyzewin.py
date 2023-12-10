@@ -103,7 +103,7 @@ def fuel_cylinder_masses(diameter, length):
     m_empty = (1/eta - 1) * m_fuel
     return (m_empty, m_fuel)
 
-def compute_masses(avl_fname, cylinders_fname, proptype, b, theta, t):
+def compute_masses(avl_fname, cylinders_fname, proptype, b, theta, t, verbose=False):
     avlInput = AvlInput(avl_fname)
 
     cylinders = np.loadtxt(cylinders_fname, skiprows=1)
@@ -171,13 +171,14 @@ def compute_masses(avl_fname, cylinders_fname, proptype, b, theta, t):
         tank_mass += me
         fuel_mass += mto - me
 
-    print("MASS BREAKDOWN")
-    print(f"Structural mass = {round(empty_mass, 4)} kg")
-    print(f"Payload mass = {round(payload, 4)} kg")
-    print(f"Propulsion system mass = {round(empty_mass, 4)} kg")
-    print(f"Fuel mass = {round(fuel_mass, 4)} kg")
-    print(f"Empty tank mass = {round(tank_mass, 4)} kg")
-    print()
+    if verbose:
+        print("MASS BREAKDOWN")
+        print(f"Structural mass = {round(empty_mass, 4)} kg")
+        print(f"Payload mass = {round(payload, 4)} kg")
+        print(f"Propulsion system mass = {round(empty_mass, 4)} kg")
+        print(f"Fuel mass = {round(fuel_mass, 4)} kg")
+        print(f"Empty tank mass = {round(tank_mass, 4)} kg")
+        print()
 
     return (empty_mass, landing_mass, takeoff_mass, pax, payload, eta)
 
@@ -330,7 +331,7 @@ def analyze(args, b, theta, t, cref, thick_scale, verbose=False):
 
     # COMPUTE MASSES AND PLANFORM FROM INPUT FILES
 
-    me, ml, mto, pax, payload, eta = compute_masses(args.avl_fname, args.cylinders_fname, proptype, b, theta, t)
+    me, ml, mto, pax, payload, eta = compute_masses(args.avl_fname, args.cylinders_fname, proptype, b, theta, t, verbose)
     S, sections = compute_planform(args.avl_fname)
 
     if verbose:
@@ -344,12 +345,12 @@ def analyze(args, b, theta, t, cref, thick_scale, verbose=False):
 
     # COMPUTE OBJECTIVE
 
-    obj = time * me
+    obj = time * me / payload
 
     if verbose:
         print("AIRCRAFT OBJECTIVE")
-        print(f"OBJ A = {round(obj / 1E+9, 4)}E+9 s")
-        print(f"OBJ B = {round(obj / payload/ 3_600.0, 4)} h")
+        print(f"OBJ A = {round(obj * payload / 1E+9, 4)}E+9 s")
+        print(f"OBJ B = {round(obj / 3_600.0, 4)} h")
         print()
 
     # COMPUTE CL

@@ -14,12 +14,6 @@ AVL = rf"{PWD}/avl"
 XFOIL = rf"{PWD}/xfoil"
 
 #############
-# DUMP FILE #
-#############
-
-DUMP = "temp.txt"
-
-#############
 # CONSTANTS #
 #############
 
@@ -103,7 +97,7 @@ def fuel_cylinder_masses(diameter, length):
     m_empty = (1/eta - 1) * m_fuel
     return (m_empty, m_fuel)
 
-def compute_masses(avl_fname, cylinders_fname, proptype, b, theta, t):
+def compute_masses(avl_fname, cylinders_fname, proptype, b, theta, t, verbose=False):
     avlInput = AvlInput(avl_fname)
 
     cylinders = np.loadtxt(cylinders_fname, skiprows=1)
@@ -171,13 +165,14 @@ def compute_masses(avl_fname, cylinders_fname, proptype, b, theta, t):
         tank_mass += me
         fuel_mass += mto - me
 
-    print("MASS BREAKDOWN")
-    print(f"Structural mass = {round(empty_mass, 4)} kg")
-    print(f"Payload mass = {round(payload, 4)} kg")
-    print(f"Propulsion system mass = {round(empty_mass, 4)} kg")
-    print(f"Fuel mass = {round(fuel_mass, 4)} kg")
-    print(f"Empty tank mass = {round(tank_mass, 4)} kg")
-    print()
+    if verbose:
+        print("MASS BREAKDOWN")
+        print(f"Structural mass = {round(m_struct, 4)} kg")
+        print(f"Payload mass = {round(payload, 4)} kg")
+        print(f"Propulsion system mass = {round(m_propulsion, 4)} kg")
+        print(f"Fuel mass = {round(fuel_mass, 4)} kg")
+        print(f"Empty tank mass = {round(tank_mass, 4)} kg")
+        print()
 
     return (empty_mass, landing_mass, takeoff_mass, pax, payload, eta)
 
@@ -244,31 +239,29 @@ quit
         coefficients.append(cdv)
     return coefficients
 
-def compute_aoa_and_induced_drag(cl, verbose=False):
+def compute_aoa_and_induced_drag(avl_fname, cl, verbose=False):
     if verbose:
         print("INVISCID VORTEX LATTICE MODEL")
-    A = f"""load bwb.avl
+    A = f"""load {avl_fname}
 
 oper
 A
 C {cl}
 X
-W
-forces.txt
-W
-test.txt
 
 quit
     """
     with open("a", "w") as f:
         f.write(A)
-    os.system(f"{AVL} < a > {DUMP}")
+    os.system(f"{AVL} < a > save.txt")
+    aoa = 0
+    cdi = 0
     try:
-        with open("forces.txt", "r") as f:
-            data = [[v.strip() for v in d.strip().split("=") if len(v.strip()) != 0] for d in f.read().split()]
-        os.remove("forces.txt")
-        os.remove("test.txt")
-        os.remove(DUMP)
+        with open("save.txt", "r") as f:
+            file = f.read()
+            aoa = float(file.split("Alpha =  ")[-1].strip()[:8])
+            cdi = float(file.split("CDind = ")[-1].strip()[:8])
+        os.remove("save.txt")
         os.remove("a")
     except:
         print("AVL calculation diverged :(")
@@ -284,13 +277,6 @@ quit
         os.remove("test.txt")
         os.remove(DUMP)
         os.remove("a")
-        return 0, 0
-    processed = []
-    for row in data:
-        if len(row) > 0:
-            processed.append(row[0])
-    aoa = float(processed[1 + processed.index("Alpha")])
-    cdi = float(processed[1 + processed.index("CDind")])
     return aoa, cdi
 
 def compute_viscous_drag(cdv_array, sections):
@@ -330,26 +316,27 @@ def analyze(args, b, theta, t, cref, thick_scale, verbose=False):
 
     # COMPUTE MASSES AND PLANFORM FROM INPUT FILES
 
-    me, ml, mto, pax, payload, eta = compute_masses(args.avl_fname, args.cylinders_fname, proptype, b, theta, t)
+    me, ml, mto, pax, payload, eta = compute_masses(args.avl_fname, args.cylinders_fname, proptype, b, theta, t, verbose)
     S, sections = compute_planform(args.avl_fname)
 
     if verbose:
-        print("AIRCRAFT MASS AND PASSENGER CAPACITY")
+        print("AIRCRAFT MASS")
         print(f"Empty mass = {round(me, 4)} kg")
         print(f"Landing mass = {round(ml, 4)} kg")
         print(f"Take-off mass = {round(mto, 4)} kg")
-        print(f"Payload = {round(payload, 4)} kg")
+        print()
+        print("PASSENGER CAPACITY")
         print(f"Passengers = {floor(pax)} pax")
         print()
 
     # COMPUTE OBJECTIVE
 
-    obj = time * me
+    obj = time * me / payload
 
     if verbose:
         print("AIRCRAFT OBJECTIVE")
-        print(f"OBJ A = {round(obj / 1E+9, 4)}E+9 s")
-        print(f"OBJ B = {round(obj / payload/ 3_600.0, 4)} h")
+        print(f"OBJ A = {round(obj * payload / 1E+9, 4)}E+9 kg s")
+        print(f"OBJ B = {round(obj / 3_600.0, 4)} h")
         print()
 
     # COMPUTE CL
@@ -364,7 +351,7 @@ def analyze(args, b, theta, t, cref, thick_scale, verbose=False):
 
     # COMPUTE AOA AND CDi FROM AVL
 
-    aoa, cdi = compute_aoa_and_induced_drag(cl, verbose)
+    aoa, cdi = compute_aoa_and_induced_drag(args.avl_fname, cl, verbose)
 
     if verbose:
         print(f"AOA = {round(aoa, 4)}")
