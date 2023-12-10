@@ -1,5 +1,6 @@
 import argparse
 import numpy as np
+from PIL import Image
 from graph import AvlInput
 from math import sqrt, log, floor, cos, acos
 import os
@@ -193,12 +194,13 @@ def process_conditions(conditions_fname):
     assert len(data) == 5
     return data
 
-def viscous_drag_array(re, aoa, thick_scale, verbose=False):
+def viscous_drag_array(re, aoa, mach, thick_scale, verbose=False):
     if verbose:
         print("VISCOUS DRAG MODEL")
     coefficients = []
     for i in range(15):
         airfoil = f"orig{i}foilmod.dat"
+        hard = "hard" if i == 0 else ""
         X = f"""load {airfoil}
 
 gdes
@@ -207,9 +209,11 @@ exec
 
 oper
 visc {re}
+mach {mach}
 alfa 0
 alfa {float(aoa/2)}
 alfa {float(aoa)}
+{hard}
 
 quit
             """
@@ -360,7 +364,7 @@ def analyze(args, b, theta, t, cref, thick_scale, verbose=False):
 
     # COMPUTE CDv FROM XFOIL
 
-    cdv_array = viscous_drag_array(re, aoa, thick_scale, verbose)
+    cdv_array = viscous_drag_array(re, aoa, mach, thick_scale, verbose)
     cdv = compute_viscous_drag(cdv_array, sections)
 
     if verbose:

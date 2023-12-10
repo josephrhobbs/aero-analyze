@@ -57,6 +57,16 @@ This is an *optional* argument specifying the thickness scale of the wing.
 
 If not specified, this defaults to `1.0`.
 
+# Warning: Shock Drag
+
+After running `analyze.py`, it is strongly recommended for you to inspect `plot.ps`.  This is
+XFOIL's output of your root airfoil.
+
+You may see a dotted line near the top of the plot--this is the "sonic limit" of the coefficient of
+pressure.  If the coefficient of pressure is more negative (above) this limit, your selected flight
+conditions produce shock waves.  In this case, you are advised not to the results of `analyze.py`
+as shock drag effects are likely non-negligible.
+
 # Setup Instructions
 
 ## Windows
