@@ -1,5 +1,6 @@
 import argparse
 import numpy as np
+from PIL import Image
 from graph import AvlInput
 from math import sqrt, log, floor, cos, acos
 import os
@@ -12,12 +13,6 @@ PWD = os.getcwd()
 
 AVL = rf"{PWD}\avl.exe"
 XFOIL = rf"{PWD}\xfoil.exe"
-
-#############
-# DUMP FILE #
-#############
-
-DUMP = "temp.txt"
 
 #############
 # CONSTANTS #
@@ -173,9 +168,9 @@ def compute_masses(avl_fname, cylinders_fname, proptype, b, theta, t, verbose=Fa
 
     if verbose:
         print("MASS BREAKDOWN")
-        print(f"Structural mass = {round(empty_mass, 4)} kg")
+        print(f"Structural mass = {round(m_struct, 4)} kg")
         print(f"Payload mass = {round(payload, 4)} kg")
-        print(f"Propulsion system mass = {round(empty_mass, 4)} kg")
+        print(f"Propulsion system mass = {round(m_propulsion, 4)} kg")
         print(f"Fuel mass = {round(fuel_mass, 4)} kg")
         print(f"Empty tank mass = {round(tank_mass, 4)} kg")
         print()
@@ -199,12 +194,13 @@ def process_conditions(conditions_fname):
     assert len(data) == 5
     return data
 
-def viscous_drag_array(re, aoa, thick_scale, verbose=False):
+def viscous_drag_array(re, aoa, mach, thick_scale, verbose=False):
     if verbose:
         print("VISCOUS DRAG MODEL")
     coefficients = []
     for i in range(15):
         airfoil = f"orig{i}foilmod.dat"
+        hard = "hard" if i == 0 else ""
         X = f"""load {airfoil}
 
 gdes
@@ -213,9 +209,11 @@ exec
 
 oper
 visc {re}
+mach {mach}
 alfa 0
 alfa {float(aoa/2)}
 alfa {float(aoa)}
+{hard}
 
 quit
             """
@@ -245,31 +243,29 @@ quit
         coefficients.append(cdv)
     return coefficients
 
-def compute_aoa_and_induced_drag(cl, verbose=False):
+def compute_aoa_and_induced_drag(avl_fname, cl, verbose=False):
     if verbose:
         print("INVISCID VORTEX LATTICE MODEL")
-    A = f"""load bwb.avl
+    A = f"""load {avl_fname}
 
 oper
 A
 C {cl}
 X
-W
-forces.txt
-W
-test.txt
 
 quit
     """
     with open("a", "w") as f:
         f.write(A)
-    os.system(f"{AVL} < a > {DUMP}")
+    os.system(f"{AVL} < a > save.txt")
+    aoa = 0
+    cdi = 0
     try:
-        with open("forces.txt", "r") as f:
-            data = [[v.strip() for v in d.strip().split("=") if len(v.strip()) != 0] for d in f.read().split()]
-        os.remove("forces.txt")
-        os.remove("test.txt")
-        os.remove(DUMP)
+        with open("save.txt", "r") as f:
+            file = f.read()
+            aoa = float(file.split("Alpha =  ")[-1].strip()[:8])
+            cdi = float(file.split("CDind = ")[-1].strip()[:8])
+        os.remove("save.txt")
         os.remove("a")
     except:
         print("AVL calculation diverged :(")
@@ -285,13 +281,6 @@ quit
         os.remove("test.txt")
         os.remove(DUMP)
         os.remove("a")
-        return 0, 0
-    processed = []
-    for row in data:
-        if len(row) > 0:
-            processed.append(row[0])
-    aoa = float(processed[1 + processed.index("Alpha")])
-    cdi = float(processed[1 + processed.index("CDind")])
     return aoa, cdi
 
 def compute_viscous_drag(cdv_array, sections):
@@ -335,11 +324,12 @@ def analyze(args, b, theta, t, cref, thick_scale, verbose=False):
     S, sections = compute_planform(args.avl_fname)
 
     if verbose:
-        print("AIRCRAFT MASS AND PASSENGER CAPACITY")
+        print("AIRCRAFT MASS")
         print(f"Empty mass = {round(me, 4)} kg")
         print(f"Landing mass = {round(ml, 4)} kg")
         print(f"Take-off mass = {round(mto, 4)} kg")
-        print(f"Payload = {round(payload, 4)} kg")
+        print()
+        print("PASSENGER CAPACITY")
         print(f"Passengers = {floor(pax)} pax")
         print()
 
@@ -349,7 +339,7 @@ def analyze(args, b, theta, t, cref, thick_scale, verbose=False):
 
     if verbose:
         print("AIRCRAFT OBJECTIVE")
-        print(f"OBJ A = {round(obj * payload / 1E+9, 4)}E+9 s")
+        print(f"OBJ A = {round(obj * payload / 1E+9, 4)}E+9 kg s")
         print(f"OBJ B = {round(obj / 3_600.0, 4)} h")
         print()
 
@@ -365,7 +355,7 @@ def analyze(args, b, theta, t, cref, thick_scale, verbose=False):
 
     # COMPUTE AOA AND CDi FROM AVL
 
-    aoa, cdi = compute_aoa_and_induced_drag(cl, verbose)
+    aoa, cdi = compute_aoa_and_induced_drag(args.avl_fname, cl, verbose)
 
     if verbose:
         print(f"AOA = {round(aoa, 4)}")
@@ -374,7 +364,7 @@ def analyze(args, b, theta, t, cref, thick_scale, verbose=False):
 
     # COMPUTE CDv FROM XFOIL
 
-    cdv_array = viscous_drag_array(re, aoa, thick_scale, verbose)
+    cdv_array = viscous_drag_array(re, aoa, mach, thick_scale, verbose)
     cdv = compute_viscous_drag(cdv_array, sections)
 
     if verbose:
