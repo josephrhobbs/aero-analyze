@@ -5,6 +5,9 @@
 # Ignore XFOIL output files
 *.bl
 
+# Ignore PostScript files
+*.ps
+
 # Ignore Python-generated directory
 /__pycache__
 
