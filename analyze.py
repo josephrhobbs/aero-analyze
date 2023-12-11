@@ -1,6 +1,5 @@
 import argparse
 import numpy as np
-from PIL import Image
 from graph import AvlInput
 from math import sqrt, log, floor, cos, acos
 import os
@@ -33,8 +32,11 @@ C2 = 12 # kg m2
 C3 = 0.2 # kg N^-0.89
 C4 = 0.015 # kg / N
 C5 = 0.0006 # kg / W
-
 C6 = C4 + 100 * C5 # kg / N
+
+# Wave drag model coefficients
+W1 = -0.028143
+W1 =  0.674524
 
 def section_spar(sec, xSpar):
     x = (xSpar - sec.xyzLE[0]) / sec.chord
@@ -293,6 +295,16 @@ def compute_viscous_drag(cdv_array, sections):
 
     return viscous_drag / sum(sections)
 
+def compute_wave_drag(mach, aoa):
+    # Compute critical Mach number
+    Mcr = W1 * aoa + W2
+
+    # Compute coefficient of wave drag
+    if mach >= Mcr:
+        return 20 * pow(mach - Mcr, 4)
+    else:
+        return 0
+
 def analyze(args, b, theta, t, cref, thick_scale, verbose=False):
     # READ IN FLIGHT CONDITIONS
 
@@ -370,6 +382,10 @@ def analyze(args, b, theta, t, cref, thick_scale, verbose=False):
     if verbose:
         print(f"CDv = {round(cdv, 4)}")
         print()
+
+    # COMPUTE CDw FROM MODEL
+
+    cdw = compute_wave_drag(mach, aoa)
 
     # COMPUTE CD FROM CDi AND CDv
 
