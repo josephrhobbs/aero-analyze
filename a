@@ -1,9 +1,0 @@
-load ./bwb/bwb0000.avl
-
-oper
-A
-C 0.6947137525756812
-X
-
-quit
-    
