@@ -2,16 +2,6 @@ import argparse
 import numpy as np
 from graph import AvlInput
 from math import sqrt, log, floor, cos, acos
-import os
-
-###############
-# AVL & XFOIL #
-###############
-
-PWD = os.getcwd()
-
-AVL = rf"{PWD}/avl"
-XFOIL = rf"{PWD}/xfoil"
 
 #############
 # CONSTANTS #
@@ -36,7 +26,7 @@ C6 = C4 + 100 * C5 # kg / N
 
 # Wave drag model coefficients
 W1 = -0.028143
-W1 =  0.674524
+W2 =  0.674524
 
 def section_spar(sec, xSpar):
     x = (xSpar - sec.xyzLE[0]) / sec.chord
@@ -71,12 +61,12 @@ def compute_planform(avl_fname):
     wing = avlInput.surfaces[0]
     sections = []
     for i in range(len(wing.sections)):
-         c = wing.sections[i].chord
-         y0 = wing.sections[max(0, i-1)].xyzLE[1]
-         y1 = wing.sections[min(len(wing.sections)-1, i+1)].xyzLE[1]
-         dy = (y1 - y0) / 2
-         s = 2 * c * dy
-         sections.append(s)
+        c = wing.sections[i].chord
+        y0 = wing.sections[max(0, i-1)].xyzLE[1]
+        y1 = wing.sections[min(len(wing.sections)-1, i+1)].xyzLE[1]
+        dy = (y1 - y0) / 2
+        s = 2 * c * dy
+        sections.append(s)
     return sum(sections), sections
 
 def compute_reference_dimensions(avl_fname):
@@ -179,8 +169,8 @@ def compute_masses(avl_fname, cylinders_fname, proptype, b, theta, t, verbose=Fa
 
     return (empty_mass, landing_mass, takeoff_mass, pax, payload, eta)
 
-def compute_range(ml, mto, eta, cl, cd):
-    return ENERGY * eta / GRAVITY * cl / cd * log(mto / ml)
+def compute_range(ml, mto, eta, ld):
+    return ENERGY * eta / GRAVITY * ld * log(mto / ml)
 
 def process_conditions(conditions_fname):
     """
@@ -195,115 +185,6 @@ def process_conditions(conditions_fname):
         data = [float(row) for row in f.read().split("\n") if len(row) > 0 and row[0] != "#"]
     assert len(data) == 5
     return data
-
-def viscous_drag_array(re, aoa, mach, thick_scale, verbose=False):
-    if verbose:
-        print("VISCOUS DRAG MODEL")
-    coefficients = []
-    for i in range(15):
-        airfoil = f"orig{i}foilmod.dat"
-        hard = "hard" if i == 0 else ""
-        X = f"""load {airfoil}
-
-gdes
-tfac {thick_scale} {thick_scale}
-exec
-
-oper
-visc {re}
-mach {mach}
-alfa 0
-alfa {float(aoa/2)}
-alfa {float(aoa)}
-{hard}
-
-quit
-            """
-        with open("x", "w") as f:
-            f.write(X)
-        os.system(f"{XFOIL} < x > save.txt")
-        cdv = 0
-        try:
-            with open("save.txt", "r") as f:
-                file = f.read()
-                cdv = float(file.split("CD = ")[-1].strip()[:6])
-            os.remove("save.txt")
-            os.remove("x")
-        except:
-            print("XFOIL calculation diverged :(")
-            with open("x", "r") as f:
-                print("INPUT FILE")
-                print(f.read())
-                print()
-            with open("save.txt", "r") as f:
-                print("OUTPUT FILE")
-                print(f.read())
-                print()
-            os.remove("save.txt")
-            os.remove("x")
-            return [0] * 15
-        coefficients.append(cdv)
-    return coefficients
-
-def compute_aoa_and_induced_drag(avl_fname, cl, verbose=False):
-    if verbose:
-        print("INVISCID VORTEX LATTICE MODEL")
-    A = f"""load {avl_fname}
-
-oper
-A
-C {cl}
-X
-
-quit
-    """
-    with open("a", "w") as f:
-        f.write(A)
-    os.system(f"{AVL} < a > save.txt")
-    aoa = 0
-    cdi = 0
-    try:
-        with open("save.txt", "r") as f:
-            file = f.read()
-            aoa = float(file.split("Alpha =  ")[-1].strip()[:8])
-            cdi = float(file.split("CDind = ")[-1].strip()[:8])
-        os.remove("save.txt")
-        os.remove("a")
-    except:
-        print("AVL calculation diverged :(")
-        with open("a", "r") as f:
-            print("INPUT FILE")
-            print(f.read())
-            print()
-        with open("forces.txt", "r") as f:
-            print("OUTPUT FILE")
-            print(f.read())
-            print()
-        os.remove("forces.txt")
-        os.remove("test.txt")
-        os.remove(DUMP)
-        os.remove("a")
-    return aoa, cdi
-
-def compute_viscous_drag(cdv_array, sections):
-    avlInput = AvlInput(args.avl_fname)
-
-    viscous_drag = 0
-
-    for i in range(15):
-        viscous_drag += cdv_array[i] * sections[i]
-
-    return viscous_drag / sum(sections)
-
-def compute_wave_drag(mach, aoa):
-    # Compute critical Mach number
-    Mcr = W1 * aoa + W2
-
-    # Compute coefficient of wave drag
-    if mach >= Mcr:
-        return 20 * pow(mach - Mcr, 4)
-    else:
-        return 0
 
 def analyze(args, b, theta, t, cref, thick_scale, verbose=False):
     # READ IN FLIGHT CONDITIONS
@@ -365,54 +246,32 @@ def analyze(args, b, theta, t, cref, thick_scale, verbose=False):
         print(f"CL = {round(cl, 4)}")
         print()
 
-    # COMPUTE AOA AND CDi FROM AVL
+    # COMPUTE CD
 
-    aoa, cdi = compute_aoa_and_induced_drag(args.avl_fname, cl, verbose)
-
-    if verbose:
-        print(f"AOA = {round(aoa, 4)}")
-        print(f"CDi = {round(cdi, 4)}")
-        print()
-
-    # COMPUTE CDv FROM XFOIL
-
-    cdv_array = viscous_drag_array(re, aoa, mach, thick_scale, verbose)
-    cdv = compute_viscous_drag(cdv_array, sections)
-
-    if verbose:
-        print(f"CDv = {round(cdv, 4)}")
-        print()
-
-    # COMPUTE CDw FROM MODEL
-
-    cdw = compute_wave_drag(mach, aoa)
-
-    # COMPUTE CD FROM CDi AND CDv
-
-    cd = cdv + cdi
-
+    ld = float(args.ld)
+    cd = cl / ld
     if verbose:
         print("COEFFICIENT OF DRAG")
         print(f"CD = {round(cd, 4)}")
-        print()
 
     # COMPUTE RANGE
 
-    R = compute_range(ml, mto, eta, cl, cd)
+    R = compute_range(ml, mto, eta, ld)
     
     if verbose:
         print("AIRCRAFT RANGE")
-        print(f"L/D = {round(cl/cd, 4)}")
+        print(f"L/D = {round(ld, 4)}")
         print(f"Range = {round(R / 1000, 4)} km")
 
     return obj, R
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(prog='substitute',
-            description='substitute new planform into AVL file')
+    parser = argparse.ArgumentParser(prog='analyze',
+            description='compute aircraft performance')
     parser.add_argument('avl_fname')
     parser.add_argument('cylinders_fname')
     parser.add_argument('conditions_fname')
+    parser.add_argument('ld')
     parser.add_argument('--thick-scale', type=float, default=1.0)
     args = parser.parse_args()
 

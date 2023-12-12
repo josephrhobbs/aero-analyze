@@ -6,24 +6,16 @@ For use during the MIT 16.100 Final Project.
 
 # Cross-Platform Compatibility
 
-`analyze.py` works on both Windows and Linux now!
-
-## Windows Users
-
-Windows users should use `analyzewin.py`.
-
-## Linux Users
-
-Linux users should use `analyze.py`.
+`analyze.py` works on Windows and Linux!
 
 # Usage
 
 ```
-python3 analyze.py [AVL-file] [cylinders-file] [conditions-file]
+python3 analyze.py [AVL-file] [cylinders-file] [conditions-file] [lift-drag-ratio]
 ```
 
 ```
-python3 analyze.py [AVL-file] [cylinders-file] [conditions-file] --thick-scale 1.0
+python3 analyze.py [AVL-file] [cylinders-file] [conditions-file] [lift-drag-ratio] --thick-scale 1.0
 ```
 
 ## AVL File
@@ -51,37 +43,19 @@ See `conditions.txt` for an example of this file format.
 
 Note that all lines beginning with a hash (`#`) in a flight conditions file will be ignored. 
 
+## Lift-Drag Ratio
+
+This is a *required* argument specifying the lift-drag ratio, as calculated by CFD.
+
 ## Thickness Scale
 
 This is an *optional* argument specifying the thickness scale of the wing.
 
 If not specified, this defaults to `1.0`.
 
-# Warning: Shock Drag
-
-After running `analyze.py`, it is strongly recommended for you to inspect `plot.ps`.  This is
-XFOIL's output of your root airfoil.
-
-You may see a dotted line near the top of the plot--this is the "sonic limit" of the coefficient of
-pressure.  If the coefficient of pressure is more negative (above) this limit, your selected flight
-conditions produce shock waves.  In this case, you are advised not to the results of `analyze.py`
-as shock drag effects are likely non-negligible.
-
-# Setup Instructions
-
-## Windows
-
-Before using `analyzewin.py`, copy `avl.exe` and `xfoil.exe` into the current directory.
-
-## Linux
-
-Before using `analyze.py`, copy `avl` and `xfoil` into the current directory.
-
-## macOS
-
-Unfortunately, I don't know how to use macOS well enough to provide instructions.
-
 # Changelog
+
+**v0.4.0**: Removed aerodynamic analysis capability due to transonic behaviors.
 
 **v0.3.0**: Updated `analyze.py` to allow for thickness scaling.  Added `analyzewin.py` for Windows users.
 
@@ -97,9 +71,5 @@ Thanks to MIT Professor Qiqi Wang for:
 - `vehicle.py`
 - `*.dat` airfoils
 - `cylinders.txt`
-
-Thanks to MIT Professor Mark Drela for:
-- AVL (not included)
-- XFOIL (not included)
 
 Thanks to Boeing and Bob Liebeck for the original `bwb.avl`.

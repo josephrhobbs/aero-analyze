@@ -1,5 +1,5 @@
 # Flight Conditions
-# 16000 m, M 0.85
+# 16000 m, M 0.8
 
 # Propulsive system type
 # 1: Turbine engine
@@ -7,7 +7,7 @@
 1
 
 # Cruise Mach number (unitless)
-0.85
+0.8
 
 # Local speed of sound (m/s)
 295.1

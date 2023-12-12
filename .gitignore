@@ -21,6 +21,7 @@ xfoil
 
 # Ignore my code
 quietanalyze.py
+masses.py
 
 # Ignore my shell scripts
 analyze
