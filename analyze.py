@@ -253,6 +253,7 @@ def analyze(args, b, theta, t, cref, thick_scale, verbose=False):
     if verbose:
         print("COEFFICIENT OF DRAG")
         print(f"CD = {round(cd, 4)}")
+        print()
 
     # COMPUTE RANGE
 
