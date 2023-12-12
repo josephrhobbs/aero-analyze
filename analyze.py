@@ -255,6 +255,7 @@ def analyze(args, b, theta, t, cref, thick_scale, verbose=False):
     R = compute_range(ml, mto, eta, ld)
 
     if verbose:
+        print("AIRCRAFT RANGE")
         print(f"Range = {round(R / 1000, 4)} km")
 
     return obj, R
