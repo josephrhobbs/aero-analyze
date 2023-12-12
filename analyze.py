@@ -236,32 +236,25 @@ def analyze(args, b, theta, t, cref, thick_scale, verbose=False):
         print(f"OBJ B = {round(obj / 3_600.0, 4)} h")
         print()
 
-    # COMPUTE CL
+    # COMPUTE AERODYNAMIC PERFORMANCE
 
     q = 1/2 * rho * pow(uinf, 2)
     cl = mto * GRAVITY / q / Sref
-
-    if verbose:
-        print("COEFFICIENT OF LIFT")
-        print(f"CL = {round(cl, 4)}")
-        print()
-
-    # COMPUTE CD
-
     ld = float(args.ld)
     cd = cl / ld
+
     if verbose:
-        print("COEFFICIENT OF DRAG")
+        print("AERODYNAMIC PERFORMANCE")
+        print(f"CL = {round(cl, 4)}")
         print(f"CD = {round(cd, 4)}")
+        print(f"L/D = {round(ld, 4)}")
         print()
 
     # COMPUTE RANGE
 
     R = compute_range(ml, mto, eta, ld)
-    
+
     if verbose:
-        print("AIRCRAFT RANGE")
-        print(f"L/D = {round(ld, 4)}")
         print(f"Range = {round(R / 1000, 4)} km")
 
     return obj, R
