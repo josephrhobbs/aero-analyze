@@ -1,0 +1,17 @@
+# Flow360 Setup Conditions
+# 14000 m
+
+# Cruise Mach number (unitless)
+0.65
+
+# Angle of Attack (degrees)
+0
+
+# Temperature (kelvin)
+216.7
+
+# Kinematic viscosity (m2/s)
+6.239e-5
+
+# Ramp Steps (count)
+3000
